@@ -1,6 +1,9 @@
 name: Build 281 Vision Orange Pi Image
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
