@@ -52,7 +52,7 @@ jobs:
         xz -T 0 -v ubuntu-24.04.img
 
     - name: Upload new image
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4.3.4
       with:
         name: modified-orangepi-image
         path: ubuntu-24.04.img.xz
