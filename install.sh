@@ -28,15 +28,15 @@ debug() {
 }
 
 
-#apt-get update
+apt-get update
 
 #stuff from photonvision, not sure if we need it all
-#apt-get install -y curl avahi-daemon cpufrequtils v4l-utils libatomic1
+apt-get install -y curl avahi-daemon cpufrequtils v4l-utils libatomic1
 
 #stuff to install python 3.11.11
-#apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
-#apt-get install -y libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
-#apt-get install -y ffmpeg libsm6 libxext6 dos2unix
+apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
+apt-get install -y libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
+apt-get install -y ffmpeg libsm6 libxext6 dos2unix
 
 
 debug "Setting cpufrequtils to performance mode"
@@ -61,6 +61,27 @@ echo "pi:raspberry" | chpasswd
 
 
 
+cat > /etc/netplan/01-netcfg.yaml <<EOF
+network:
+  version: 2
+  ethernets:
+    eth0:  
+      dhcp4: true
+      dhcp4-overrides:
+        use-dns: false  # Optional: Prevent DHCP from overriding static DNS
+      addresses:
+        - 10.2.81.11/24  # Static IP address
+      gateway4: 10.2.81.1  # Gateway for static configuration
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+      optional: true  # Ensure the interface doesn't block boot if not ready
+      required-timeout: 5  # Timeout for DHCP to respond (in seconds)
+
+EOF
+
+
 # networkd isn't being used, this causes an unnecessary delay
 systemctl disable systemd-networkd-wait-online.service
 btservices=$(systemctl list-unit-files *bluetooth.service | tail -n +2 | head -n -1 | awk '{print $1}')
@@ -73,20 +94,18 @@ done
 # clean up stuff
 
 # get rid of snaps
-#rm -rf /var/lib/snapd/seed/snaps/*
-#rm -f /var/lib/snapd/seed/seed.yaml
-#apt-get purge --yes --quiet lxd-installer lxd-agent-loader
-#apt-get purge --yes --quiet bluez
-#apt-get --yes --quiet autoremove
-#rm -rf /var/lib/apt/lists/*
-#apt-get --yes --quiet clean
-#rm -rf /usr/share/doc
-#rm -rf /usr/share/locale/
+rm -rf /var/lib/snapd/seed/snaps/*
+rm -f /var/lib/snapd/seed/seed.yaml
+apt-get purge --yes --quiet lxd-installer lxd-agent-loader
+apt-get purge --yes --quiet bluez
+apt-get --yes --quiet autoremove
+rm -rf /var/lib/apt/lists/*
+apt-get --yes --quiet clean
+rm -rf /usr/share/doc
+rm -rf /usr/share/locale/
 
 
 
-debug "Set up Network Service"
-#mkdir -p /opt/$APP_NAME
 cat > /lib/systemd/system/vision.service <<EOF
 [Unit]
 Description=Service that runs vision
@@ -156,5 +175,3 @@ eval "$(pyenv virtualenv-init -)"
 EOF
 
 systemctl start vision.service
-
-
