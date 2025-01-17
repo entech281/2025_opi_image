@@ -26,7 +26,6 @@ debug() {
   fi
 }
 
-
 apt-get update
 
 #stuff from photonvision, not sure if we need it all
@@ -47,7 +46,7 @@ fi
 
 
 # Create pi/raspberry login
-if id "$1" >/dev/null 2>&1; then
+if id "pi" >/dev/null 2>&1; then
     echo 'user found'
 else
     echo "creating pi user"
@@ -72,23 +71,35 @@ done
 # clean up stuff
 
 # get rid of snaps
-rm -rf /var/lib/snapd/seed/snaps/*
-rm -f /var/lib/snapd/seed/seed.yaml
-apt-get purge --yes --quiet lxd-installer lxd-agent-loader
-apt-get purge --yes --quiet bluez
-apt-get --yes --quiet autoremove
-rm -rf /var/lib/apt/lists/*
-apt-get --yes --quiet clean
-rm -rf /usr/share/doc
-rm -rf /usr/share/locale/
+#rm -rf /var/lib/snapd/seed/snaps/*
+#rm -f /var/lib/snapd/seed/seed.yaml
+#apt-get purge --yes --quiet lxd-installer lxd-agent-loader
+#apt-get purge --yes --quiet bluez
+#apt-get --yes --quiet autoremove
+#rm -rf /var/lib/apt/lists/*
+#apt-get --yes --quiet clean
+#rm -rf /usr/share/doc
+#rm -rf /usr/share/locale/
 
 
 #set up python
 pwd
 ls -l 
-cp install_python.sh /home/pi/install_python.sh
-chown pi:pi /home/pi/install_python.sh
-sudo -u pi /home/pi/install_python.sh
+
+curl -fsSL https://pyenv.run | bash
+export PATH="/root/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+
+pyenv install 3.11.11
+pyenv virtualenv 3.11.11 venv
+pyenv activate venv
+pip install --upgrade pip
+pip install numpy opencv-python
+pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
+cp -R /root/.pyenv /home/py
+chown -R pi:pi /home/pi/.pyenv
 
 
 debug "Set up Network Service"
@@ -105,7 +116,7 @@ Nice=-10
 # look up the right values for your CPU
 # AllowedCPUs=4-7
 
-ExecStart=/home/ubuntu/.pyenv/versions/3.11.11/envs/robot/bin/python april2.py
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python april2.py
 ExecStop=/bin/systemctl kill $281vision
 Type=simple
 Restart=on-failure
@@ -140,7 +151,4 @@ cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf <<EOF
 [Journal]
 SystemMaxUse=100M
 EOF
-
-
-
 
