@@ -16,6 +16,7 @@
 # of steps
 
 #MUST RUN AS ROOT
+
 set -ex
 QUIET="YES"
 debug() {
@@ -26,15 +27,16 @@ debug() {
   fi
 }
 
-apt-get update
+
+#apt-get update
 
 #stuff from photonvision, not sure if we need it all
-apt-get install -y curl avahi-daemon cpufrequtils v4l-utils libatomic1
+#apt-get install -y curl avahi-daemon cpufrequtils v4l-utils libatomic1
 
 #stuff to install python 3.11.11
-apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
-apt-get install -y libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
-apt-get install -y ffmpeg libsm6 libxext6 dos2unix
+#apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
+#apt-get install -y libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
+#apt-get install -y ffmpeg libsm6 libxext6 dos2unix
 
 
 debug "Setting cpufrequtils to performance mode"
@@ -82,31 +84,12 @@ done
 #rm -rf /usr/share/locale/
 
 
-#set up python
-pwd
-ls -l 
-
-curl -fsSL https://pyenv.run | bash
-export PATH="/root/.pyenv/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-
-
-pyenv install 3.11.11
-pyenv virtualenv 3.11.11 venv
-pyenv activate venv
-pip install --upgrade pip
-pip install numpy opencv-python
-pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
-cp -R /root/.pyenv /home/py
-chown -R pi:pi /home/pi/.pyenv
-
 
 debug "Set up Network Service"
 #mkdir -p /opt/$APP_NAME
-cat > /lib/systemd/system/281vision.service <<EOF
+cat > /lib/systemd/system/vision.service <<EOF
 [Unit]
-Description=Service that runs 281vision
+Description=Service that runs vision
 
 [Service]
 WorkingDirectory=/home/pi/
@@ -116,8 +99,8 @@ Nice=-10
 # look up the right values for your CPU
 # AllowedCPUs=4-7
 
-ExecStart=/home/pi/.pyenv/versions/venv/bin/python april2.py
-ExecStop=/bin/systemctl kill $281vision
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python /home/pi/vision.py
+ExecStop=/bin/systemctl kill $vision
 Type=simple
 Restart=on-failure
 RestartSec=1
@@ -126,29 +109,52 @@ RestartSec=1
 WantedBy=multi-user.target
 EOF
 
-# let netplan create the config during cloud-init
-#rm -f /etc/netplan/00-default-nm-renderer.yaml
-
-# set NetworkManager as the renderer in cloud-init
-#cp -f ./OPi5_CIDATA/network-config /boot/network-config
 
 
 if grep -q "RK3588" /proc/cpuinfo; then
   debug "This has a Rockchip RK3588, enabling big cores"
-  sed -i 's/# AllowedCPUs=4-7/AllowedCPUs=4-7/g' /lib/systemd/system/281vision.service
+  sed -i 's/# AllowedCPUs=4-7/AllowedCPUs=4-7/g' /lib/systemd/system/vision.service
 fi
 
-cp /lib/systemd/system/281vision.service /etc/systemd/system/281vision.service
-chmod 644 /etc/systemd/system/281vision.service
+cp /lib/systemd/system/vision.service /etc/systemd/system/vision.service
+chmod 644 /etc/systemd/system/vision.service
 systemctl daemon-reload
-systemctl enable 281vision.service
+systemctl enable vision.service
 
 debug "Created $APP_NAME systemd service."
 
 mkdir -p /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf <<EOF
-# Added by Photonvision to keep the logs to a reasonable size
+cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf << EOF
+# Added to keep the logs to a reasonable size
 [Journal]
 SystemMaxUse=100M
 EOF
+
+#set up python, pyenv, and a virtual environment for the pi user
+pwd
+ls -l 
+
+curl -fsSL https://pyenv.run | bash
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+pyenv install 3.11.11
+pyenv virtualenv 3.11.11 venv
+pyenv activate venv
+pip install --upgrade pip
+pip install numpy opencv-python
+pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
+
+cp -r -a --dereference /root/.pyenv /home/pi/
+chown -R pi:pi /home/pi/.pyenv
+
+cat > /home/pi/.bashrc  << 'EOF'
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+EOF
+
+systemctl start vision.service
+
 
