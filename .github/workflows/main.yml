@@ -38,9 +38,8 @@ jobs:
 
     - name: Copy and execute install.sh
       run: |
-        sudo cp ./install.sh /mnt/root/install.sh
-        sudo chmod +x /mnt/root/install.sh
-        sudo chroot /mnt/root "./install.sh"
+        sudo chmod +x install.sh
+        sudo "./install.sh"
 
     - name: Cleanup and unmount
       run: |
