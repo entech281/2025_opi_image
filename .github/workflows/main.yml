@@ -49,7 +49,7 @@ jobs:
 
     - name: Compress modified image
       run: |
-        xz -9 ubuntu-24.04.img
+        xz-T 0 -v ubuntu-24.04.img
 
     - name: Upload new image
       uses: actions/upload-artifact@v3
