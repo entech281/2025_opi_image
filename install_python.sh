@@ -2,6 +2,8 @@
 
 set -ex
 
+
+
 curl -fsSL https://pyenv.run | bash
 export PATH="/home/ubuntu/.pyenv/bin:$PATH"
 eval "$(pyenv init -)"
