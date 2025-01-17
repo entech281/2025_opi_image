@@ -40,7 +40,7 @@ jobs:
       run: |
         sudo cp ./install.sh /mnt/root/install.sh
         sudo chmod +x /mnt/root/install.sh
-        sudo chroot /mnt/root /bin/bash -c "/install.sh"
+        sudo chroot /mnt/root "./install.sh"
 
     - name: Cleanup and unmount
       run: |
