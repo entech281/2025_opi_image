@@ -2,7 +2,8 @@ name: Build 281 Vision Orange Pi Image
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
     branches: [ main ]
 
@@ -11,34 +12,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4.1.7
-      with:
-        fetch-depth: 0
-    - name: Fetch tags
-      run: git fetch --tags --force
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
     - name: Download base Orange Pi image
       run: |
         curl -L -o ubuntu-24.04.img.xz https://github.com/Joshua-Riek/ubuntu-rockchip/releases/download/v2.4.0/ubuntu-24.04-preinstalled-server-arm64-orangepi-5.img.xz
 
-    - uses: pguyot/arm-runner-action@HEAD
-      id: install_deps
-      with:
-        image_additional_mb: 1500
-        bind_mount_repository: true
-        base_image: ubuntu-24.04.img.xz https://github.com/Joshua-Riek/ubuntu-rockchip/releases/download/v2.4.0/ubuntu-24.04-preinstalled-server-arm64-orangepi-5.img.xz
-        commands: |
-          chmod +x install.sh
-          install.sh
-      
-    - name: Compress built image
+    - name: Extract image
       run: |
-        mv ${{ steps.install_deps.outputs.image }} 281_vision_opi5_arm64.img
-        sudo xz -T 0 -v 281_vision_opi5_arm64.img
+        xz -d ubuntu-24.04.img.xz
 
-    - uses: actions/upload-artifact@v4.3.4
+    - name: Setup loopback device
+      run: |
+        sudo losetup -Pf ubuntu-24.04.img
+        export LOOPDEV=$(losetup -l | grep "ubuntu-24.04.img" | awk '{print $1}')
+        echo "Loopback device: $LOOPDEV"
+        echo "LOOPDEV=$LOOPDEV" >> $GITHUB_ENV
+
+    - name: Mount image partitions
+      run: |
+        sudo mkdir -p /mnt/root
+        sudo mount ${LOOPDEV}p2 /mnt/root
+        sudo mount ${LOOPDEV}p1 /mnt/root/boot
+
+    - name: Copy and execute install.sh
+      run: |
+        sudo cp ./install.sh /mnt/root/install.sh
+        sudo chmod +x /mnt/root/install.sh
+        sudo chroot /mnt/root /bin/bash -c "/install.sh"
+
+    - name: Cleanup and unmount
+      run: |
+        sudo umount /mnt/root/boot
+        sudo umount /mnt/root
+        sudo losetup -d $LOOPDEV
+
+    - name: Compress modified image
+      run: |
+        xz -9 ubuntu-24.04.img
+
+    - name: Upload new image
+      uses: actions/upload-artifact@v3
       with:
-        name: 281_vision_opi5_arm64.img.xz
-        path: 281_vision_opi5_arm64.img.xz
-        if-no-files-found: error
-        retention-days: 1
+        name: modified-orangepi-image
+        path: ubuntu-24.04.img.xz
+
