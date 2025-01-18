@@ -65,20 +65,20 @@ cat > /etc/netplan/01-netcfg.yaml <<EOF
 network:
   version: 2
   ethernets:
-    eth0:  
-      dhcp4: true
+    end1:
+      dhcp4: false
       dhcp4-overrides:
         use-dns: false  # Optional: Prevent DHCP from overriding static DNS
       addresses:
         - 10.2.81.11/24  # Static IP address
-      gateway4: 10.2.81.1  # Gateway for static configuration
+      routes:
+        - to: 0.0.0.0/0
+          via: 10.2.81.1
       nameservers:
         addresses:
           - 8.8.8.8
           - 8.8.4.4
       optional: true  # Ensure the interface doesn't block boot if not ready
-      required-timeout: 5  # Timeout for DHCP to respond (in seconds)
-
 EOF
 
 

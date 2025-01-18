@@ -18,9 +18,11 @@ def quit_if_modified():
         print("Script was modified. exiting.")
         sys.exit(0)
 
+SETTINGS_STREAM_PORT=5800
+ANNOTATED_STREAM_PORT=5801
 
-RESOLUTION_WIDTH=320
-RESOLUTION_HEIGHT=240
+RESOLUTION_WIDTH=800
+RESOLUTION_HEIGHT=600
 class FrameTimer(object):
 
     def __init__(self,sample_count):
@@ -44,8 +46,6 @@ def main():
 
     detector = AprilTagDetector()
     detector_config = AprilTagDetector.Config()
-    #photonvision settings from    https://github.com/PhotonVision/photonvision/blob/main/photon-core/src/main/java/org/photonvision/vision/pipeline/AprilTagPipelineSettings.java
-    # also see https://robotpy.readthedocs.io/projects/apriltag/en/latest/robotpy_apriltag/AprilTagDetector.html
     detector_config.numThreads =4
     detector_config.refineEdges = True
     detector_config.quadDecimate = 1
@@ -67,21 +67,21 @@ def main():
 
     detector.addFamily("tag36h11")
 
-    mjpegServer = cs.MjpegServer("httpserver", 8081)
+    mjpegServer = cs.MjpegServer("httpserver", SETTINGS_STREAM_PORT)
     mjpegServer.setSource(camera)
 
-    print("mjpg server listening at http://0.0.0.0:8081")
+    print(f"mjpg server listening at http://0.0.0.0:{SETTINGS_STREAM_PORT}")
 
     cvsink = cs.CvSink("cvsink")
     cvsink.setSource(camera)
 
     cvSource = cs.CvSource("cvsource", cs.VideoMode.PixelFormat.kMJPEG, RESOLUTION_WIDTH,RESOLUTION_HEIGHT, 100)
-    cvMjpegServer = cs.MjpegServer("cvhttpserver", 8082)
+    cvMjpegServer = cs.MjpegServer("cvhttpserver", ANNOTATED_STREAM_PORT)
     cvMjpegServer.setSource(cvSource)
 
-    print("OpenCV output mjpg server listening at http://0.0.0.0:8082")
+    print(f"OpenCV output mjpg server listening at http://0.0.0.0:{ANNOTATED_STREAM_PORT}")
 
-    test = np.zeros(shape=(600, 800, 3), dtype=np.uint8)
+    test = np.zeros(shape=(RESOLUTION_HEIGHT, RESOLUTION_WIDTH, 3), dtype=np.uint8)
 
     while True:
         quit_if_modified()
@@ -93,6 +93,7 @@ def main():
         fps = frame_timer.sps
 
         cv2.putText(frame, f"{fps:.0f} FPS",(20,30),cv2.FONT_HERSHEY_SIMPLEX,1.2,(0,255,0),2, cv2.LINE_AA)
+        cv2.putText(frame, f"Default Code", (50, 100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2, cv2.LINE_AA)
 
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detections = detector.detect(gray_frame)
