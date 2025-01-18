@@ -16,6 +16,7 @@
 # of steps
 
 #MUST RUN AS ROOT
+
 set -ex
 QUIET="YES"
 debug() {
@@ -47,7 +48,7 @@ fi
 
 
 # Create pi/raspberry login
-if id "$1" >/dev/null 2>&1; then
+if id "pi" >/dev/null 2>&1; then
     echo 'user found'
 else
     echo "creating pi user"
@@ -58,6 +59,27 @@ else
 fi
 echo "pi:raspberry" | chpasswd
 
+
+
+cat > /etc/netplan/01-netcfg.yaml <<EOF
+network:
+  version: 2
+  ethernets:
+    eth0:  
+      dhcp4: true
+      dhcp4-overrides:
+        use-dns: false  # Optional: Prevent DHCP from overriding static DNS
+      addresses:
+        - 10.2.81.11/24  # Static IP address
+      gateway4: 10.2.81.1  # Gateway for static configuration
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+      optional: true  # Ensure the interface doesn't block boot if not ready
+      required-timeout: 5  # Timeout for DHCP to respond (in seconds)
+
+EOF
 
 
 # networkd isn't being used, this causes an unnecessary delay
@@ -83,19 +105,10 @@ rm -rf /usr/share/doc
 rm -rf /usr/share/locale/
 
 
-#set up python
-pwd
-ls -l 
-cp install_python.sh /home/pi/install_python.sh
-chown pi:pi /home/pi/install_python.sh
-sudo -u pi /home/pi/install_python.sh
 
-
-debug "Set up Network Service"
-#mkdir -p /opt/$APP_NAME
-cat > /lib/systemd/system/281vision.service <<EOF
+cat > /lib/systemd/system/vision.service <<EOF
 [Unit]
-Description=Service that runs 281vision
+Description=Service that runs vision
 
 [Service]
 WorkingDirectory=/home/pi/
@@ -105,8 +118,8 @@ Nice=-10
 # look up the right values for your CPU
 # AllowedCPUs=4-7
 
-ExecStart=/home/ubuntu/.pyenv/versions/3.11.11/envs/robot/bin/python april2.py
-ExecStop=/bin/systemctl kill $281vision
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python /home/pi/vision.py
+ExecStop=/bin/systemctl kill $vision
 Type=simple
 Restart=on-failure
 RestartSec=1
@@ -115,32 +128,50 @@ RestartSec=1
 WantedBy=multi-user.target
 EOF
 
-# let netplan create the config during cloud-init
-#rm -f /etc/netplan/00-default-nm-renderer.yaml
-
-# set NetworkManager as the renderer in cloud-init
-#cp -f ./OPi5_CIDATA/network-config /boot/network-config
 
 
 if grep -q "RK3588" /proc/cpuinfo; then
   debug "This has a Rockchip RK3588, enabling big cores"
-  sed -i 's/# AllowedCPUs=4-7/AllowedCPUs=4-7/g' /lib/systemd/system/281vision.service
+  sed -i 's/# AllowedCPUs=4-7/AllowedCPUs=4-7/g' /lib/systemd/system/vision.service
 fi
 
-cp /lib/systemd/system/281vision.service /etc/systemd/system/281vision.service
-chmod 644 /etc/systemd/system/281vision.service
+cp /lib/systemd/system/vision.service /etc/systemd/system/vision.service
+chmod 644 /etc/systemd/system/vision.service
 systemctl daemon-reload
-systemctl enable 281vision.service
+systemctl enable vision.service
 
 debug "Created $APP_NAME systemd service."
 
 mkdir -p /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf <<EOF
-# Added by Photonvision to keep the logs to a reasonable size
+cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf << EOF
+# Added to keep the logs to a reasonable size
 [Journal]
 SystemMaxUse=100M
 EOF
 
+#set up python, pyenv, and a virtual environment for the pi user
+pwd
+ls -l 
 
+curl -fsSL https://pyenv.run | bash
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
 
+pyenv install 3.11.11
+pyenv virtualenv 3.11.11 venv
+pyenv activate venv
+pip install --upgrade pip
+pip install numpy opencv-python
+pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
 
+cp -r -a --dereference /root/.pyenv /home/pi/
+chown -R pi:pi /home/pi/.pyenv
+
+cat > /home/pi/.bashrc  << 'EOF'
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+EOF
+
+systemctl start vision.service

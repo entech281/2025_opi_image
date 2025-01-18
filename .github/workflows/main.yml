@@ -1,0 +1,59 @@
+name: Build 281 Vision Orange Pi Image
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Download base Orange Pi image
+      run: |
+        curl -L -o ubuntu-24.04.img.xz https://github.com/Joshua-Riek/ubuntu-rockchip/releases/download/v2.4.0/ubuntu-24.04-preinstalled-server-arm64-orangepi-5.img.xz
+
+    - name: Extract image
+      run: |
+        xz -d ubuntu-24.04.img.xz
+
+    - name: Setup loopback device
+      run: |
+        sudo losetup -Pf ubuntu-24.04.img
+        export LOOPDEV=$(losetup -l | grep "ubuntu-24.04.img" | awk '{print $1}')
+        echo "Loopback device: $LOOPDEV"
+        echo "LOOPDEV=$LOOPDEV" >> $GITHUB_ENV
+
+    - name: Mount image partitions
+      run: |
+        sudo mkdir -p /mnt/root
+        sudo mount ${LOOPDEV}p2 /mnt/root
+        sudo mount ${LOOPDEV}p1 /mnt/root/boot
+
+    - name: Copy and execute install.sh
+      run: |
+        sudo chmod +x install.sh
+        sudo "./install.sh"
+
+    - name: Cleanup and unmount
+      run: |
+        sudo umount /mnt/root/boot
+        sudo umount /mnt/root
+        sudo losetup -d $LOOPDEV
+
+    - name: Compress modified image
+      run: |
+        xz -T 0 -v ubuntu-24.04.img
+
+    - name: Upload new image
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: modified-orangepi-image
+        path: ubuntu-24.04.img.xz
+
