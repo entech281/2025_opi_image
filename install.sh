@@ -169,9 +169,3 @@ cp -r -a --dereference /home/runner/.pyenv /home/pi/
 cp vision.py /home/pi
 chown -R pi:pi /home/pi/.pyenv
 
-cat > /home/pi/.bashrc  << 'EOF'
-export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-EOF
-
