@@ -169,3 +169,4 @@ cp -r -a --dereference /home/runner/.pyenv /home/pi/
 cp vision.py /home/pi
 chown -R pi:pi /home/pi/.pyenv
 
+echo "127.0.0.1 ubuntu" >> /etc/hosts
