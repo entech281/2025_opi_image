@@ -167,6 +167,6 @@ pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpili
 
 cp -r -a --dereference /home/runner/.pyenv /home/pi/
 cp vision.py /home/pi
-chown -R pi:pi /home/pi/.pyenv
+chown -R pi:pi /home/pi
 
 echo "127.0.0.1 ubuntu" >> /etc/hosts
