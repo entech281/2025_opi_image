@@ -116,9 +116,9 @@ WorkingDirectory=/home/pi/
 Nice=-10
 # for non-uniform CPUs, like big.LITTLE, you want to select the big cores
 # look up the right values for your CPU
-# AllowedCPUs=4-7
+AllowedCPUs=4-7
 
-ExecStart=/home/pi/.pyenv/versions/venv/bin/python /home/pi/vision.py
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python -u /home/pi/vision.py
 ExecStop=/bin/systemctl kill $vision
 Type=simple
 Restart=on-failure
@@ -128,12 +128,6 @@ RestartSec=1
 WantedBy=multi-user.target
 EOF
 
-
-
-if grep -q "RK3588" /proc/cpuinfo; then
-  debug "This has a Rockchip RK3588, enabling big cores"
-  sed -i 's/# AllowedCPUs=4-7/AllowedCPUs=4-7/g' /lib/systemd/system/vision.service
-fi
 
 cp /lib/systemd/system/vision.service /etc/systemd/system/vision.service
 chmod 644 /etc/systemd/system/vision.service
