@@ -166,6 +166,7 @@ pip install numpy opencv-python
 pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
 
 cp -r -a --dereference /home/runner/.pyenv /home/pi/
+cp vision.py /home/pi
 chown -R pi:pi /home/pi/.pyenv
 
 cat > /home/pi/.bashrc  << 'EOF'
