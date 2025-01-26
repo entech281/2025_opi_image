@@ -1,3 +1,5 @@
+import argparse
+import video_util
 import cscore as cs
 import numpy as np
 import cv2
@@ -40,11 +42,7 @@ def print_camera_properties(camera):
                     print("    %s: %s" % (i, choice))
 
 
-SETTINGS_STREAM_PORT=5800
-ANNOTATED_STREAM_PORT=5801
-RESOLUTION_WIDTH=640
-RESOLUTION_HEIGHT=480
-FRAME_RATE=120
+
 
 class FrameTimer(object):
 
@@ -62,16 +60,36 @@ class FrameTimer(object):
             self.start_time = time.time()
             self.samples =0
 
+BASE_PORT = 5800
 
-def main():
+def compute_settings_port_from_index(index):
+    return BASE_PORT + 2*index
 
-    camera = cs.UsbCamera("usbcam", 0)
+def compute_debug_port_from_index(index):
+    return BASE_PORT + 2*index + 1
+
+def main(busname, server_index):
+
+    SETTINGS_STREAM_PORT = compute_settings_port_from_index(server_index)
+    ANNOTATED_STREAM_PORT = compute_debug_port_from_index(server_index)
+
+    RESOLUTION_WIDTH = 640
+    RESOLUTION_HEIGHT = 480
+    CAPTURE_FRAME_RATE = 120
+    DEBUG_FRAME_RATE = 20
+
+    device_name = video_util.DEVICE_MAP[busname]
+    if device_name is None:
+        print("Cant find camera on this bus, valid values are ",video_util.DEVICE_MAP)
+        sys.exit(1)
+
+    camera = cs.UsbCamera("usbcam", device_name)
     camera.getProperty('auto_exposure').set(1)
     camera.getProperty('white_balance_automatic').set(0)
     camera.getProperty('raw_exposure_time_absolute').set(15)
     print_camera_properties(camera)
 
-    camera.setVideoMode(cs.VideoMode.PixelFormat.kMJPEG, RESOLUTION_WIDTH,RESOLUTION_HEIGHT, FRAME_RATE)
+    camera.setVideoMode(cs.VideoMode.PixelFormat.kMJPEG, RESOLUTION_WIDTH,RESOLUTION_HEIGHT, CAPTURE_FRAME_RATE)
 
     detector = AprilTagDetector()
     detector_config = AprilTagDetector.Config()
@@ -104,7 +122,7 @@ def main():
     cvsink = cs.CvSink("cvsink")
     cvsink.setSource(camera)
 
-    cvSource = cs.CvSource("cvsource", cs.VideoMode.PixelFormat.kMJPEG, RESOLUTION_WIDTH,RESOLUTION_HEIGHT, FRAME_RATE)
+    cvSource = cs.CvSource("cvsource", cs.VideoMode.PixelFormat.kMJPEG, RESOLUTION_WIDTH,RESOLUTION_HEIGHT, DEBUG_FRAME_RATE)
     cvMjpegServer = cs.MjpegServer("cvhttpserver", ANNOTATED_STREAM_PORT)
     cvMjpegServer.setSource(cvSource)
 
@@ -155,5 +173,13 @@ def main():
            #print(f"Detected Tag ID: {tag_id}, Center: {center}")
 
         cvSource.putFrame(frame)
+
 if __name__ == '__main__':
-     main()
+
+    parser = argparse.ArgumentParser(description="Single Camera Server")
+
+    parser.add_argument("bus", type=str, help="The bus identifier (string)-- example: 007 or 005.")
+    parser.add_argument("index", type=int, help="The device index (integer)-- beginning with 0 ")
+
+    args = parser.parse_args()
+    main(args.bus, args.index)
