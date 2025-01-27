@@ -19,7 +19,7 @@ jobs:
     - uses: pguyot/arm-runner-action@HEAD
       id: install_deps
       with:
-        image_additional_mb: 1500
+        image_additional_mb: 1800
         bind_mount_repository: true
         base_image: https://github.com/Joshua-Riek/ubuntu-rockchip/releases/download/v2.4.0/ubuntu-24.04-preinstalled-server-arm64-orangepi-5.img.xz
         commands: |

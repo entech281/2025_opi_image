@@ -36,7 +36,7 @@ apt-get install -y curl avahi-daemon cpufrequtils v4l-utils libatomic1
 #stuff to install python 3.11.11
 apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
 apt-get install -y libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
-apt-get install -y ffmpeg libsm6 libxext6 dos2unix
+apt-get install -y ffmpeg libsm6 libxext6 dos2unix ifstat
 
 
 debug "Setting cpufrequtils to performance mode"
@@ -90,10 +90,7 @@ for btservice in $btservices; do
     systemctl mask "$btservice"
 done
 
-
 # clean up stuff
-
-# get rid of snaps
 rm -rf /var/lib/snapd/seed/snaps/*
 rm -f /var/lib/snapd/seed/seed.yaml
 apt-get purge --yes --quiet lxd-installer lxd-agent-loader
@@ -105,8 +102,7 @@ rm -rf /usr/share/doc
 rm -rf /usr/share/locale/
 
 
-
-cat > /lib/systemd/system/vision.service <<EOF
+cat > /lib/systemd/system/vision_camera0.service <<EOF
 [Unit]
 Description=Service that runs vision
 
@@ -116,10 +112,54 @@ WorkingDirectory=/home/pi/
 Nice=-10
 # for non-uniform CPUs, like big.LITTLE, you want to select the big cores
 # look up the right values for your CPU
-AllowedCPUs=4-7
+AllowedCPUs=1-7
 
-ExecStart=/home/pi/.pyenv/versions/venv/bin/python -u /home/pi/vision.py
-ExecStop=/bin/systemctl kill $vision
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python -u /home/pi/vision.py 003 0
+ExecStop=/bin/systemctl kill $vision_camera0
+Type=simple
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > /lib/systemd/system/vision_camera1.service <<EOF
+[Unit]
+Description=Service that runs vision
+
+[Service]
+WorkingDirectory=/home/pi/
+# Run at "nice" -10, which is higher priority than standard
+Nice=-10
+# for non-uniform CPUs, like big.LITTLE, you want to select the big cores
+# look up the right values for your CPU
+AllowedCPUs=1-7
+
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python -u /home/pi/vision.py 005 1
+ExecStop=/bin/systemctl kill $vision_camera1
+Type=simple
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > /lib/systemd/system/vision_camera2.service <<EOF
+[Unit]
+Description=Service that runs vision
+
+[Service]
+WorkingDirectory=/home/pi/
+# Run at "nice" -10, which is higher priority than standard
+Nice=-10
+# for non-uniform CPUs, like big.LITTLE, you want to select the big cores
+# look up the right values for your CPU
+AllowedCPUs=1-7
+
+ExecStart=/home/pi/.pyenv/versions/venv/bin/python -u /home/pi/vision.py 007 2
+ExecStop=/bin/systemctl kill $vision_camera2
 Type=simple
 Restart=on-failure
 RestartSec=1
@@ -129,12 +169,18 @@ WantedBy=multi-user.target
 EOF
 
 
-cp /lib/systemd/system/vision.service /etc/systemd/system/vision.service
-chmod 644 /etc/systemd/system/vision.service
-systemctl daemon-reload
-systemctl enable vision.service
+cp /lib/systemd/system/vision_camera0.service /etc/systemd/system/vision_camera0.service
+cp /lib/systemd/system/vision_camera1.service /etc/systemd/system/vision_camera1.service
+cp /lib/systemd/system/vision_camera2.service /etc/systemd/system/vision_camera2.service
 
-debug "Created $APP_NAME systemd service."
+chmod 644 /etc/systemd/system/vision_camera0.service
+chmod 644 /etc/systemd/system/vision_camera1.service
+chmod 644 /etc/systemd/system/vision_camera2.service
+
+systemctl daemon-reload
+
+
+debug "Created $APP_NAME systemd services."
 
 mkdir -p /etc/systemd/journald.conf.d
 cat > /etc/systemd/journald.conf.d/60-limit-log-size.conf << EOF
@@ -145,10 +191,9 @@ EOF
 
 #set up python, pyenv, and a virtual environment for the pi user
 pwd
-ls -l 
 
 curl -fsSL https://pyenv.run | bash
-export PATH="$HOME/.pyenv/bin:$PATH"
+export PATH="/$HOME/.pyenv/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
@@ -156,11 +201,28 @@ pyenv install 3.11.11
 pyenv virtualenv 3.11.11 venv
 pyenv activate venv
 pip install --upgrade pip
-pip install numpy opencv-python
+pip install numpy opencv-python pyudev argparse
 pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
 
+cat > /root/.bashrc << EOF
+export PATH="/root/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+EOF
+
+cat > /home/pi/.bashrc << EOF
+export PATH="/home/pi/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+EOF
+
 cp -r -a --dereference /home/runner/.pyenv /home/pi/
-cp vision.py /home/pi
+cp -r -a --dereference /home/runner/.pyenv /root/
+cp *.py *.sh /home/pi
 chown -R pi:pi /home/pi
 
 echo "127.0.0.1 ubuntu" >> /etc/hosts
+
+systemctl enable vision_camera0.service
+systemctl enable vision_camera1.service
+systemctl enable vision_camera2.service
