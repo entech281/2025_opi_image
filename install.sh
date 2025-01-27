@@ -193,7 +193,7 @@ EOF
 pwd
 
 curl -fsSL https://pyenv.run | bash
-export PATH="/root/.pyenv/bin:$PATH"
+export PATH="/$HOME/.pyenv/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
