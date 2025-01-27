@@ -216,8 +216,8 @@ eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 EOF
 
-#cp -r -a --dereference /home/runner/.pyenv /home/pi/
-cp -r -a --dereference /root/.pyenv /home/pi/
+cp -r -a --dereference /home/runner/.pyenv /home/pi/
+cp -r -a --dereference /home/runner/.pyenv /root/
 cp *.py *.sh /home/pi
 chown -R pi:pi /home/pi
 
