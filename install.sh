@@ -164,4 +164,9 @@ cp vision.py /home/pi
 cp *.sh /home/pi
 chown -R pi:pi /home/pi
 
+cat >> /home/pi/.bashrc << 'EOF'
+export PATH="$HOME/.pyenv/bin:$PATH"
+source /home/pi/.pyenv/versions/venv/bin/activate
+EOF
+
 echo "127.0.0.1 ubuntu" >> /etc/hosts

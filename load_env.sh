@@ -1,1 +1,0 @@
-source ~/.pyenv/versions/venv/bin/activate
