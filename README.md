@@ -11,3 +11,9 @@ password: raspberry
 Restart vision: sudo systemctl restart vision
 See logs: sudo journalctl -f -u vision
 see cpu: htop
+
+
+## Running locally
+How to repro the pipeline locally
+https://chatgpt.com/share/68db1c7f-163c-8013-8378-a3c48325ffd1
+
