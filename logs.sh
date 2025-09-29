@@ -1,0 +1,1 @@
+sudo journalctl -n 50 -f -u vision

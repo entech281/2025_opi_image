@@ -156,11 +156,17 @@ pyenv install 3.11.11
 pyenv virtualenv 3.11.11 venv
 pyenv activate venv
 pip install --upgrade pip
-pip install numpy opencv-python
+pip install numpy opencv-python pyudev
 pip install --extra-index-url=https://wpilib.jfrog.io/artifactory/api/pypi/wpilib-python-release-2025/simple robotpy robotpy_cscore robotpy_apriltag
 
 cp -r -a --dereference /home/runner/.pyenv /home/pi/
 cp vision.py /home/pi
+cp *.sh /home/pi
 chown -R pi:pi /home/pi
+
+cat >> /home/pi/.bashrc << 'EOF'
+export PATH="$HOME/.pyenv/bin:$PATH"
+source /home/pi/.pyenv/versions/venv/bin/activate
+EOF
 
 echo "127.0.0.1 ubuntu" >> /etc/hosts
